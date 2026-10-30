@@ -350,6 +350,7 @@ var logstoreMigrationSteps = []migrationStep{
 	{IDs: []string{"relay_logs_add_object_columns"}, run: migrationAddRelayLogObjectColumns},
 	{IDs: []string{"relay_logs_add_session_id"}, run: migrationAddRelayLogSessionID},
 	{IDs: []string{"relay_logs_add_correlation_columns"}, run: migrationAddRelayLogCorrelationColumns},
+	{IDs: []string{"relay_logs_add_websocket_columns"}, run: migrationAddRelayLogWebSocketColumns},
 }
 
 // areThereAnyPendingMigrations returns true if there are any pending migrations to be applied.
@@ -6093,6 +6094,34 @@ func migrationAddRelayLogCorrelationColumns(ctx context.Context, db *gorm.DB, lo
 		},
 		Rollback: func(*gorm.DB) error {
 			return fmt.Errorf("relay_logs_add_correlation_columns is non-rollbackable: dropping the columns would lose the correlation recorded on existing rows")
+		},
+	}})
+	return m.Migrate()
+}
+
+// migrationAddRelayLogWebSocketColumns adds the columns a relayed WebSocket session is recorded with:
+// the websocket flag, the caller's bytes and frames, the frames forwarded, and the session summary.
+// Each is nullable or has a constant default, so adding it is a catalog change on Postgres; none is
+// indexed (the websocket filter narrows a list already bounded by time).
+func migrationAddRelayLogWebSocketColumns(ctx context.Context, db *gorm.DB, logger schemas.Logger) error {
+	opts := *migrator.DefaultOptions
+	opts.UseTransaction = true
+	m := migrator.New(db, &opts, []*migrator.Migration{{
+		ID: "relay_logs_add_websocket_columns",
+		Migrate: func(tx *gorm.DB) error {
+			tx = tx.WithContext(ctx)
+			if err := boundDDLLockWait(tx); err != nil {
+				return err
+			}
+			for _, field := range []string{"WebSocket", "BytesIn", "FramesIn", "FramesOut", "Socket"} {
+				if err := addColumnIfNotExists(tx, logger, &RelayLog{}, field); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+		Rollback: func(*gorm.DB) error {
+			return fmt.Errorf("relay_logs_add_websocket_columns is non-rollbackable: dropping the columns would lose the session records on existing rows")
 		},
 	}})
 	return m.Migrate()

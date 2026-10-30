@@ -2236,8 +2236,9 @@ export const relayUsageBaseSchema = z.object({
 });
 
 /** A route is billable by default only for POST, so the flag is stored only when it differs. */
-export function routeBillableByDefault(method: string): boolean {
-	return method.toUpperCase() === "POST";
+/** A route is billable by default for POST, and for a WebSocket route, whose upgrade is a GET but whose session is what an API bills. */
+export function routeBillableByDefault(method: string, websocket?: boolean): boolean {
+	return !!websocket || method.toUpperCase() === "POST";
 }
 
 export type RelayUsageForm = z.infer<typeof relayUsageBaseSchema>;
@@ -2359,8 +2360,16 @@ export const relayRouteFormSchema = z.object({
 	enabled: z.boolean().optional(),
 	billable: z.boolean().optional(),
 	stream: z.boolean().optional(),
+	websocket: z.boolean().optional(),
 	usage: relayUsageBaseSchema.optional(),
 	job: relayJobSchema.optional(),
+});
+
+export const relayWebSocketFormSchema = z.object({
+	max_message_bytes: z.number().int().min(0).optional(),
+	max_session_seconds: z.number().int().min(0).optional(),
+	billing_window_seconds: z.number().int().min(0).optional(),
+	subprotocols: z.string().optional(),
 });
 
 // The endpoint editor form. Extra headers are edited as pairs; the credential is a SecretVar so env.
@@ -2454,6 +2463,7 @@ export const relayFormSchema = z
 				});
 			}),
 		}),
+		websocket: relayWebSocketFormSchema,
 		routes: z.array(relayRouteFormSchema),
 		skip_route_check: z.boolean(),
 		ignore_upstream_cost: z.boolean(),
@@ -2473,7 +2483,7 @@ export const relayFormSchema = z
 		// leaves a per-unit route without a units path is refused; say which route on the relay field.
 		// A route that is not billed is never priced, and its hidden override is not saved.
 		const broken = form.routes.find(
-			(r) => (r.billable ?? routeBillableByDefault(r.method)) && r.usage && relayUsageUnitsPathError(r.usage, form.usage),
+			(r) => (r.billable ?? routeBillableByDefault(r.method, r.websocket)) && r.usage && relayUsageUnitsPathError(r.usage, form.usage),
 		);
 		if (broken && !relayUsageUnitsPathError(form.usage)) {
 			ctx.addIssue({
