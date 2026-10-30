@@ -266,6 +266,7 @@ export interface RelayLog {
 	business_unit_name?: string;
 	project_id?: string;
 	project_name?: string;
+	session_id?: string; // session identity resolved at ingress (x-bf-session-id), as on LLM and MCP rows
 	user_agent?: string; // Raw HTTP User-Agent of the calling client
 	app?: string; // Backend-detected client app derived from user_agent
 	request_id: string;
@@ -284,7 +285,7 @@ export interface RelayLog {
 export interface RelayLogFilters {
 	relay_names?: string[];
 	methods?: string[];
-	statuses?: string[];
+	status?: string[];
 	kinds?: string[];
 	virtual_key_ids?: string[];
 	user_ids?: string[];
@@ -296,8 +297,11 @@ export interface RelayLogFilters {
 	billable?: boolean;
 	min_cost?: number;
 	max_cost?: number;
+	min_latency?: number;
+	max_latency?: number;
 	/** Exact request-id lookup; set by the header's "Request ID" search mode. */
 	request_id?: string;
+	session_id?: string;
 	search?: string;
 	period?: string;
 	start_time?: string;
@@ -322,6 +326,8 @@ export interface RelayLogStats {
 	total_requests: number;
 	success_count: number;
 	error_count: number;
+	cancelled_count: number;
+	/** Over finished calls, cancelled ones counted, as the LLM logs stats measure it. */
 	success_rate: number;
 	average_latency: number;
 	total_cost: number;
