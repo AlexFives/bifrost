@@ -903,6 +903,7 @@
 			"tokensNotPricedValue": "{{input}} in ingresso / {{output}} in uscita",
 			"matchedRoute": "Route corrispondente",
 			"parentLog": "Log padre",
+			"filterByValue": "Mostra le chiamate relay con questo valore",
 			"queryParameters": "Parametri di query",
 			"matchedHeaders": "Header corrispondenti",
 			"errorNoMessageWithStatus": "Il relay ha restituito un errore (HTTP {{status}}) senza messaggio.",
@@ -923,7 +924,9 @@
 			"minCost": "Min $",
 			"maxCost": "Max $",
 			"minimumCost": "Costo minimo",
-			"maximumCost": "Costo massimo"
+			"maximumCost": "Costo massimo",
+			"exactJobID": "ID job esatto",
+			"exactParentRequestID": "ID esatto della richiesta padre"
 		},
 		"grants": {
 			"label": "Accesso ai relay",

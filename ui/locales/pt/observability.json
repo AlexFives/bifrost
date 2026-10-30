@@ -340,7 +340,7 @@
 			"servedByFallback": "Servido por (regresso)",
 			"servedModel": "Modelo servido",
 			"stopReason": "Parar Razão",
-			"parentRequestID": "Pedido dos pais",
+			"parentRequestID": "ID do pedido principal",
 			"filterThisSession": "· Filtrar esta sessão",
 			"selectedKey": "Chave selecionada",
 			"selectedPrompt": "Pedido Seleccionado",
@@ -903,6 +903,7 @@
 			"tokensNotPricedValue": "{{input}} entrada / {{output}} saída",
 			"matchedRoute": "Rota correspondida",
 			"parentLog": "Registo principal",
+			"filterByValue": "Mostrar chamadas de relay com este valor",
 			"queryParameters": "Parâmetros de consulta",
 			"matchedHeaders": "Cabeçalhos correspondidos",
 			"errorNoMessageWithStatus": "O relay devolveu um erro (HTTP {{status}}) sem mensagem.",
@@ -923,7 +924,9 @@
 			"minCost": "Mín. $",
 			"maxCost": "Máx. $",
 			"minimumCost": "Custo mínimo",
-			"maximumCost": "Custo máximo"
+			"maximumCost": "Custo máximo",
+			"exactJobID": "ID de tarefa exato",
+			"exactParentRequestID": "ID exato do pedido principal"
 		},
 		"grants": {
 			"label": "Acesso a relays",

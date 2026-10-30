@@ -208,7 +208,10 @@ func TestMatchRouteSeesSentHeaders(t *testing.T) {
 	operator := &endpoint{cfg: cfg, routes: compileRoutes(cfg), usage: resolveUsage(nil, nil), operatorHeaders: map[string]string{"x-amz-target": "Textract.AnalyzeDocument"}}
 	route := operator.matchRoute("POST", "/", map[string]string{"x-amz-target": "Textract.GetDocumentAnalysis"})
 	require.NotNil(t, route)
-	assert.True(t, route.billable, "the operator's header is what is sent, so its route bills")
+	assert.False(t, route.billable, "the caller's header replaces the operator's on the wire, as on a passthrough call, so its route matches")
+	route = operator.matchRoute("POST", "/", nil)
+	require.NotNil(t, route)
+	assert.True(t, route.billable, "with no caller copy the operator's header is what is sent")
 
 	sdk := &endpoint{cfg: cfg, routes: compileRoutes(cfg), usage: resolveUsage(nil, nil)}
 	route = sdk.matchRoute("POST", "/", map[string]string{"X-Amz-Target": "Textract.GetDocumentAnalysis"})

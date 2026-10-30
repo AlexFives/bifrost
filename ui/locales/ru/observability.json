@@ -953,6 +953,7 @@
 			"tokensNotPricedValue": "{{input}} вход / {{output}} выход",
 			"matchedRoute": "Совпавший маршрут",
 			"parentLog": "Родительский журнал",
+			"filterByValue": "Показать вызовы ретрансляторов с этим значением",
 			"queryParameters": "Параметры запроса",
 			"matchedHeaders": "Совпавшие заголовки",
 			"errorNoMessageWithStatus": "Ретранслятор вернул ошибку (HTTP {{status}}) без сообщения.",
@@ -973,7 +974,9 @@
 			"minCost": "Мин. $",
 			"maxCost": "Макс. $",
 			"minimumCost": "Минимальная стоимость",
-			"maximumCost": "Максимальная стоимость"
+			"maximumCost": "Максимальная стоимость",
+			"exactJobID": "Точный ID задания",
+			"exactParentRequestID": "Точный ID родительского запроса"
 		},
 		"grants": {
 			"label": "Доступ к ретрансляторам",

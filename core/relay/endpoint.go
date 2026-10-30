@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -211,28 +212,29 @@ func (e *endpoint) buildRequest(ctx *schemas.BifrostContext, req upstreamRequest
 	if err != nil {
 		return nil, providerUtils.NewBifrostOperationError("error creating request", err)
 	}
-	// Only the operator's extra headers are applied. The context's x-bf-eh-* headers are skipped: the
-	// caller's own headers are already forwarded below, and the prefixed copies would bypass both the
-	// route match and the operator and x-amz-* filters.
+	// Headers are applied in a passthrough call's order (SetExtraHeaders, then the caller's safe
+	// headers, then the key): the operator's extra headers, the caller's x-bf-eh-* headers over them,
+	// the caller's own headers over both, and the credential last, so it always wins. A job poll is
+	// the operator's own request and takes no caller headers.
 	providerUtils.SetExtraHeadersHTTP(context.Background(), httpReq, e.cfg.ExtraHeaders, nil)
 	providerUtils.StripCallerAuthForInsecureURL(requestURL, req.headers)
-	authHeader := e.authHeader()
-	for k, v := range req.headers {
-		if strings.EqualFold(k, "authorization") || strings.EqualFold(k, "content-length") || (authHeader != "" && strings.EqualFold(k, authHeader)) {
-			continue
+	if !req.internal {
+		for k, values := range callerExtraHeaders(ctx) {
+			if e.dropsCallerHeader(k, false, true) {
+				continue
+			}
+			for i, v := range values {
+				if i == 0 {
+					httpReq.Header.Set(k, v)
+				} else {
+					httpReq.Header.Add(k, v)
+				}
+			}
 		}
-		if !req.internal {
-			// A header the operator configured (a tenant, an API version) is the operator's to set; a
-			// caller's copy of it is dropped rather than replacing it.
-			if _, operator := e.operatorHeaders[strings.ToLower(k)]; operator {
-				continue
-			}
-			// Under SigV4 every forwarded x-amz-* header is signed with the operator's credentials, so
-			// only the operation name (X-Amz-Target) is taken from the caller: x-amz-copy-source would
-			// read objects outside the pinned bucket and x-amz-acl would publish them.
-			if e.cfg.Auth.Type == schemas.RelayAuthAWSSigV4 && strings.HasPrefix(strings.ToLower(k), "x-amz-") && !strings.EqualFold(k, "x-amz-target") {
-				continue
-			}
+	}
+	for k, v := range req.headers {
+		if e.dropsCallerHeader(k, req.internal, false) {
+			continue
 		}
 		httpReq.Header.Set(k, v)
 	}
@@ -244,6 +246,66 @@ func (e *endpoint) buildRequest(ctx *schemas.BifrostContext, req upstreamRequest
 		return nil, bifrostErr
 	}
 	return httpReq, nil
+}
+
+// dropsCallerHeader reports whether a caller header is kept off the upstream request. Both kinds
+// lose the connection-level and framing headers net/http sets. The caller's own Authorization and
+// copy of the relay's credential header are dropped, as passthrough drops the caller's key headers;
+// an x-bf-eh-* header keeps them, as SetExtraHeaders does, and the credential applied after every
+// caller header replaces them. Under SigV4 only the operation name of the x-amz-* headers is
+// forwarded, since each one forwarded is signed with the operator's credentials: x-amz-copy-source
+// would read objects outside the pinned bucket and x-amz-acl would publish them. A job poll keeps
+// its own x-amz-* names.
+func (e *endpoint) dropsCallerHeader(name string, internal, extra bool) bool {
+	lower := strings.ToLower(name)
+	if _, hop := relayHopByHopHeaders[lower]; hop || lower == "content-length" {
+		return true
+	}
+	if !extra {
+		if lower == "authorization" {
+			return true
+		}
+		if authHeader := e.authHeader(); authHeader != "" && strings.EqualFold(lower, authHeader) {
+			return true
+		}
+	}
+	return !internal && e.cfg.Auth.Type == schemas.RelayAuthAWSSigV4 && strings.HasPrefix(lower, "x-amz-") && lower != "x-amz-target"
+}
+
+// relayHopByHopHeaders are the connection-level names SetExtraHeaders filters out of a passthrough
+// call's x-bf-eh-* headers; the transport already drops the caller's own copies.
+var relayHopByHopHeaders = map[string]struct{}{
+	"connection": {}, "proxy-connection": {}, "keep-alive": {}, "proxy-authenticate": {}, "proxy-authorization": {},
+	"te": {}, "trailer": {}, "transfer-encoding": {}, "upgrade": {}, "host": {},
+}
+
+// callerExtraHeaders returns the caller's x-bf-eh-* headers the transport admitted (its security
+// denylist and header_filter_config applied), prefix stripped and names lower-cased, as a provider
+// passthrough reads them.
+func callerExtraHeaders(ctx context.Context) map[string][]string {
+	if ctx == nil {
+		return nil
+	}
+	extra, _ := ctx.Value(schemas.BifrostContextKeyExtraHeaders).(map[string][]string)
+	return extra
+}
+
+// routeHeaders returns the caller's headers as the upstream will see them for routing and model
+// reading: each x-bf-eh-* header the caller did not also send itself is added beneath them, as a
+// passthrough call's caller header replaces its x-bf-eh-* copy. The caller's map is returned as is
+// when there are no x-bf-eh-* headers, so the common case allocates nothing.
+func routeHeaders(headers map[string]string, extra map[string][]string) map[string]string {
+	if len(extra) == 0 {
+		return headers
+	}
+	merged := make(map[string]string, len(headers)+len(extra))
+	for name, values := range extra {
+		if len(values) > 0 {
+			merged[name] = strings.Join(values, ", ")
+		}
+	}
+	maps.Copy(merged, headers)
+	return merged
 }
 
 // responseHeaders returns the upstream headers the caller may see, with the query credential
@@ -332,8 +394,12 @@ func (e *endpoint) openStream(ctx *schemas.BifrostContext, req upstreamRequest) 
 	}
 	start := time.Now()
 	resp, err := providerUtils.DoHTTPRequest(e.streamingClient, httpReq)
-	if timer != nil {
-		timer.Stop()
+	if timer != nil && !timer.Stop() && err == nil {
+		// The bound fired as the headers arrived: the request context is already cancelled, so
+		// the first read would fail. It is the timeout it is, not a cancellation.
+		_ = resp.Body.Close()
+		release()
+		return nil, start, nil, transportError(context.DeadlineExceeded, time.Since(start))
 	}
 	if err != nil {
 		if errors.Is(context.Cause(httpReq.Context()), context.DeadlineExceeded) {
