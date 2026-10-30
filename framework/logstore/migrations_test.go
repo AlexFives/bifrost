@@ -675,6 +675,9 @@ func TestPerformanceIndexesCoverCorrelationIDs(t *testing.T) {
 	assert.Equal(t, "logs", tables["idx_logs_agent_correlation_id"])
 	assert.Equal(t, "mcp_tool_logs", tables["idx_mcp_logs_session_id"])
 	assert.Equal(t, "mcp_tool_logs", tables["idx_mcp_logs_agent_correlation_id"])
+	// relay_logs_add_session_id adds only the column on Postgres, so the background builder must
+	// carry the index or an upgraded deployment filters relay rows by session unindexed.
+	assert.Equal(t, "relay_logs", tables["idx_relay_logs_session_id"])
 }
 
 // TestMigrationAddMCPGovernanceSnapshots verifies the attribution columns are

@@ -37,15 +37,15 @@ type Stream struct {
 	usage        *schemas.RelayUsage
 	bytesOut     int64
 
-	capture []byte // bounded body prefix for the log row; nil when content logging is off
+	capture []byte // the whole body for the log row; nil when content logging is off
 
 	once   sync.Once
 	finish func(resp *schemas.BifrostRelayResponse, err *schemas.BifrostError)
 }
 
 // newStream wraps an open upstream reply. mapping and requestUnits decide what is read; finish runs
-// the post-hooks. The returned stream buffers up to maxBufferedResponseBytes response bytes in
-// capture for the log row, but only when the content-logging policy would keep the body, so a
+// the post-hooks. The returned stream keeps the whole reply in capture for the log row, as the
+// stream accumulator keeps an LLM stream, but only when the content-logging policy would keep the body, so a
 // stream nobody logs the body of never allocates the buffer.
 func newStream(ctx *schemas.BifrostContext, e *endpoint, resp *http.Response, start time.Time, mapping resolvedUsage, billable bool, requestUnits usageFields, finish func(*schemas.BifrostRelayResponse, *schemas.BifrostError)) *Stream {
 	providerUtils.SetStreamIdleTimeoutIfEmpty(ctx, e.streamIdle)
@@ -96,7 +96,7 @@ func relayContentCaptureEnabled(ctx *schemas.BifrostContext) bool {
 		// No logging plugin stamped a default at all — either it is not registered, or its
 		// PreRelayHook did not run. Governance's or the per-request key being present on ctx for
 		// unrelated reasons must not turn capture on by itself; without a plugin to ever read the
-		// buffer, that would just retain up to maxBufferedResponseBytes per stream for nothing.
+		// buffer, that would just retain the stream's bytes for nothing.
 		return false
 	}
 	if disabled, ok := ctx.Value(schemas.BifrostContextKeyGovernanceDisableContentLogging).(bool); ok {
@@ -130,15 +130,10 @@ func (s *Stream) Read(p []byte) (int, error) {
 				s.observeEvent(event)
 			}
 		}
-		// The capture keeps the whole reply for the post-hooks, as a buffered reply's body does, and
-		// stops at the same bound the buffered relay holds (maxBufferedResponseBytes).
-		if s.capture != nil && int64(len(s.capture)) < maxBufferedResponseBytes {
-			remaining := int(maxBufferedResponseBytes) - len(s.capture)
-			chunk := p[:n]
-			if len(chunk) > remaining {
-				chunk = chunk[:remaining]
-			}
-			s.capture = append(s.capture, chunk...)
+		// The capture keeps the whole reply for the post-hooks, as a buffered reply's body does and
+		// as the stream accumulator keeps an LLM stream; there is no bound of the relay's own.
+		if s.capture != nil {
+			s.capture = append(s.capture, p[:n]...)
 		}
 	}
 	switch {

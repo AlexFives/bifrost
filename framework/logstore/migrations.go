@@ -348,6 +348,7 @@ var logstoreMigrationSteps = []migrationStep{
 	{IDs: []string{"mcp_tool_logs_add_method_column"}, run: migrationAddMethodColumnToMCPToolLogs},
 	{IDs: []string{"add_relay_logs_table"}, run: migrationCreateRelayLogsTable},
 	{IDs: []string{"relay_logs_add_object_columns"}, run: migrationAddRelayLogObjectColumns},
+	{IDs: []string{"relay_logs_add_session_id"}, run: migrationAddRelayLogSessionID},
 }
 
 // areThereAnyPendingMigrations returns true if there are any pending migrations to be applied.
@@ -3109,6 +3110,12 @@ var performanceIndexes = []performanceIndexDef{
 		table: "mcp_tool_logs",
 		name:  "idx_mcp_logs_project_id",
 		sql:   "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_mcp_logs_project_id ON mcp_tool_logs(project_id)",
+	},
+	{
+		// relay_logs_add_session_id adds only the column on Postgres; see that migration.
+		table: "relay_logs",
+		name:  "idx_relay_logs_session_id",
+		sql:   "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_relay_logs_session_id ON relay_logs(session_id) WHERE session_id IS NOT NULL",
 	},
 }
 
@@ -5994,6 +6001,42 @@ func migrationCreateRelayLogsTable(ctx context.Context, db *gorm.DB, logger sche
 		return fmt.Errorf("error while running %s migration: %s", migrationName, err.Error())
 	}
 	return nil
+}
+
+// migrationAddRelayLogSessionID adds the session_id column, so a relay call carries the same
+// session identity LLM and MCP rows record for correlation.
+//
+// Only the column is added here on Postgres, as logs_add_session_id_column does: a nullable
+// column with no default is a catalog change, while an in-migration CREATE INDEX would scan a
+// populated relay_logs under a lock that blocks inserts, and boot waits on it. The index is built
+// CONCURRENTLY by ensurePerformanceIndexes (an entry appended to performanceIndexes) after
+// migrations. SQLite builds it here. A fresh database gets it from the model's index tag when the
+// table is created.
+func migrationAddRelayLogSessionID(ctx context.Context, db *gorm.DB, logger schemas.Logger) error {
+	opts := *migrator.DefaultOptions
+	opts.UseTransaction = true
+	m := migrator.New(db, &opts, []*migrator.Migration{{
+		ID: "relay_logs_add_session_id",
+		Migrate: func(tx *gorm.DB) error {
+			tx = tx.WithContext(ctx)
+			if err := boundDDLLockWait(tx); err != nil {
+				return err
+			}
+			if err := addColumnIfNotExists(tx, logger, &RelayLog{}, "SessionID"); err != nil {
+				return err
+			}
+			if tx.Dialector.Name() != "postgres" && !tx.Migrator().HasIndex(&RelayLog{}, "idx_relay_logs_session_id") {
+				if err := tx.Migrator().CreateIndex(&RelayLog{}, "idx_relay_logs_session_id"); err != nil {
+					return fmt.Errorf("create relay_logs session_id index: %w", err)
+				}
+			}
+			return nil
+		},
+		Rollback: func(*gorm.DB) error {
+			return fmt.Errorf("relay_logs_add_session_id is non-rollbackable: dropping the column would lose the session identity recorded on existing rows")
+		},
+	}})
+	return m.Migrate()
 }
 
 // migrationAddRelayLogObjectColumns adds the columns the hybrid store uses to keep a Relay

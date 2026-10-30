@@ -462,30 +462,60 @@ func TestServeStreamCapturesRetainedHiddenContent(t *testing.T) {
 	}
 }
 
-func TestServeStreamCapturedBodyIsBoundedAtCap(t *testing.T) {
-	previous := maxBufferedResponseBytes
-	maxBufferedResponseBytes = 4096
-	t.Cleanup(func() { maxBufferedResponseBytes = previous })
-	oversized := strings.Repeat("x", int(maxBufferedResponseBytes)+1024)
+// pastFormerCap is just over the 64 MiB the relay once refused a buffered reply above and cut a
+// streamed capture at, so the size tests fail against that bound and pass without it.
+const pastFormerCap = 64<<20 + 1<<20
+
+// sizedUpstream serves size bytes in 1 MiB writes, so the test never holds the reply as one string.
+func sizedUpstream(t *testing.T, contentType string, size int) *httptest.Server {
+	t.Helper()
+	chunk := []byte(strings.Repeat("x", 1<<20))
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/event-stream")
-		_, _ = io.WriteString(w, oversized)
+		w.Header().Set("Content-Type", contentType)
+		for sent := 0; sent < size; sent += len(chunk) {
+			if _, err := w.Write(chunk[:min(len(chunk), size-sent)]); err != nil {
+				return
+			}
+		}
 	}))
-	defer upstream.Close()
-	cfg := bearerConfig("llm", upstream.URL)
-	cfg.Routes = []schemas.RelayRouteConfig{{Method: "POST", Path: "/chat", Stream: schemas.Ptr(true)}}
+	t.Cleanup(upstream.Close)
+	return upstream
+}
+
+// A buffered reply has no size bound of the relay's own, as a provider's unary reply has none: a
+// large JSON or binary reply on a route that does not stream is relayed whole, never refused.
+func TestServeBufferedRelaysLargeReplyWhole(t *testing.T) {
+	upstream := sizedUpstream(t, "application/octet-stream", pastFormerCap)
+	cfg := bearerConfig("files", upstream.URL)
+	cfg.Routes = []schemas.RelayRouteConfig{{Method: "GET", Path: "/download", Stream: schemas.Ptr(false)}}
+	m, pipeline := newTestManager(t, cfg)
+
+	res, bErr := m.Serve(testCtx(t), Request{Endpoint: "files", Method: "GET", Path: "/download", Headers: map[string]string{}})
+	require.Nil(t, bErr, "a large buffered reply is not refused for its size")
+	require.NotNil(t, res.Response)
+	assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+	assert.Equal(t, pastFormerCap, len(res.Response.Body))
+	require.Len(t, pipeline.post, 1)
+	assert.Equal(t, int64(pastFormerCap), pipeline.post[0].BytesOut)
+}
+
+// A streamed reply is captured whole for the log row past any former bound, as the stream
+// accumulator keeps an LLM stream.
+func TestServeStreamCapturesPastFormerCap(t *testing.T) {
+	upstream := sizedUpstream(t, "application/octet-stream", pastFormerCap)
+	cfg := bearerConfig("files", upstream.URL)
+	cfg.Routes = []schemas.RelayRouteConfig{{Method: "GET", Path: "/download", Stream: schemas.Ptr(true)}}
 	m, pipeline := newTestManager(t, cfg)
 
 	ctx := testCtx(t)
 	ctx.SetValue(schemas.BifrostContextKeyRelayContentLoggingEnabledByDefault, true)
-	res, bErr := m.Serve(ctx, Request{Endpoint: "llm", Method: "POST", Path: "/chat", Headers: map[string]string{}})
+	res, bErr := m.Serve(ctx, Request{Endpoint: "files", Method: "GET", Path: "/download", Headers: map[string]string{}})
 	require.Nil(t, bErr)
-	_, err := io.ReadAll(res.Stream)
+	_, err := io.Copy(io.Discard, res.Stream)
 	require.NoError(t, err)
 	require.NoError(t, res.Stream.Close())
-
 	require.Len(t, pipeline.post, 1)
-	assert.Equal(t, int(maxBufferedResponseBytes), len(pipeline.post[0].Body), "capture never grows past the buffered-reply bound, however large the reply")
+	assert.Equal(t, pastFormerCap, len(pipeline.post[0].Body), "the capture is not cut at a size of the relay's own")
 }
 
 func TestServeJobRouteHandsBackJob(t *testing.T) {

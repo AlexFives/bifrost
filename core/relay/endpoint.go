@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -21,10 +20,6 @@ import (
 	providerUtils "github.com/maximhq/bifrost/core/providers/utils"
 	"github.com/maximhq/bifrost/core/schemas"
 )
-
-// maxBufferedResponseBytes bounds a response the buffered relay will hold. A package variable so
-// tests can lower it; the streaming relay never buffers a body.
-var maxBufferedResponseBytes int64 = 64 << 20
 
 // endpoint is one configured endpoint with its routes, globs and clients compiled once per
 // (re)build. It is immutable once built; an update swaps in a new one.
@@ -282,8 +277,10 @@ func (e *endpoint) doBuffered(ctx *schemas.BifrostContext, req upstreamRequest) 
 	return e.readBuffered(resp, start, false)
 }
 
-// readBuffered reads an open reply in full, up to maxBufferedResponseBytes. bounded applies the
-// endpoint timeout to the read, for a reply opened on the streaming client, which has none.
+// readBuffered reads an open reply in full. There is no size bound of the relay's own, as there is
+// none on a provider's unary reply: the only cap on this path is the one the server puts on the
+// request body. bounded applies the endpoint timeout to the read, for a reply opened on the
+// streaming client, which has none.
 func (e *endpoint) readBuffered(resp *http.Response, start time.Time, bounded bool) (*bufferedResult, *schemas.BifrostError) {
 	defer resp.Body.Close()
 	var timedOut atomic.Bool
@@ -295,18 +292,13 @@ func (e *endpoint) readBuffered(resp *http.Response, start time.Time, bounded bo
 		defer timer.Stop()
 	}
 	// DoHTTPRequest wraps the body so time blocked reading it counts as upstream time too.
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBufferedResponseBytes+1))
+	body, err := io.ReadAll(resp.Body)
 	latency := time.Since(start)
 	if timedOut.Load() {
 		return nil, transportError(context.DeadlineExceeded, latency)
 	}
 	if err != nil {
 		return nil, providerUtils.SetErrorLatency(providerUtils.NewBifrostOperationError("error reading response body", err), latency)
-	}
-	if int64(len(body)) > maxBufferedResponseBytes {
-		tooLarge := providerUtils.NewBifrostOperationError(fmt.Sprintf("relay response is too large to buffer (limit %d bytes); configure the route to stream", maxBufferedResponseBytes), nil)
-		tooLarge.StatusCode = schemas.Ptr(http.StatusBadGateway)
-		return nil, providerUtils.SetErrorLatency(tooLarge, latency)
 	}
 	return &bufferedResult{
 		status:      resp.StatusCode,
