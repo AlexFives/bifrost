@@ -430,6 +430,46 @@ func TestToOpenAIResponsesRequest_ReasoningContentBlocksDropped(t *testing.T) {
 	})
 }
 
+// TestToOpenAIResponsesRequest_VLLMKeepsReplayedReasoningContent pins that a replayed
+// Anthropic thinking block (summary [] + one reasoning_text block) reaches vLLM's
+// Responses endpoint with its content intact, whatever the model name. vLLM reads a
+// reasoning item's content back into the prompt; dropping it hid the model's own
+// earlier reasoning from it on the next turn.
+func TestToOpenAIResponsesRequest_VLLMKeepsReplayedReasoningContent(t *testing.T) {
+	thinking := "I privately choose the code word PAMPLEMOUSSE-47."
+	bifrostReq := &schemas.BifrostResponsesRequest{
+		Provider: schemas.VLLM,
+		Model:    "deepseek-v4.1-flash",
+		Input: []schemas.ResponsesMessage{{
+			Type:               schemas.Ptr(schemas.ResponsesMessageTypeReasoning),
+			Role:               schemas.Ptr(schemas.ResponsesInputMessageRoleAssistant),
+			ResponsesReasoning: &schemas.ResponsesReasoning{Summary: []schemas.ResponsesReasoningSummary{}},
+			Content: &schemas.ResponsesMessageContent{
+				ContentBlocks: []schemas.ResponsesMessageContentBlock{{
+					Type:      schemas.ResponsesOutputMessageContentTypeReasoning,
+					Text:      schemas.Ptr(thinking),
+					Signature: schemas.Ptr("sig-123"),
+				}},
+			},
+		}},
+	}
+
+	result := ToOpenAIResponsesRequest(nil, bifrostReq)
+	require.NotNil(t, result)
+	require.Len(t, result.Input.OpenAIResponsesRequestInputArray, 1, "the reasoning item must be replayed to vLLM")
+	c := result.Input.OpenAIResponsesRequestInputArray[0].Content
+	require.NotNil(t, c)
+	require.Len(t, c.ContentBlocks, 1)
+	require.Equal(t, thinking, *c.ContentBlocks[0].Text)
+	require.Nil(t, c.ContentBlocks[0].Signature, "the Anthropic signature must not reach the Responses wire")
+
+	// The OpenAI-hosted path for the same name still drops the reasoning-only item.
+	bifrostReq.Provider = schemas.OpenAI
+	result = ToOpenAIResponsesRequest(nil, bifrostReq)
+	require.NotNil(t, result)
+	require.Empty(t, result.Input.OpenAIResponsesRequestInputArray)
+}
+
 func TestToOpenAIResponsesRequest_NormalizesReasoningEffort(t *testing.T) {
 	// Register the custom "deepseek" provider so ParseModelString strips its prefix.
 	schemas.RegisterKnownProvider(schemas.ModelProvider("deepseek"))
