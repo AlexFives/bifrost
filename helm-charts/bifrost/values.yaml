@@ -1519,6 +1519,8 @@ bifrost:
       # cloud: "commercial"  # or "gcc-high" or "dod"
       # audience: ""
       # appIdUri: ""
+      # # Reject bearer tokens Entra issued for other apps in the tenant (off by default).
+      # enforceAccessTokenAudience: true
       # userIdField: "oid"
       # teamIdsField: "groups"
       # rolesField: "roles"
@@ -1684,6 +1686,20 @@ bifrost:
   #       #     content: "..."          # required when source_type=text
   #       #     # url: "https://..."    # required when source_type=url
   #       #     # dataurl: "data:..."   # required when source_type=dataurl
+
+  # Workload identity (enterprise): let CI pipelines and cloud workloads call Bifrost with a
+  # Microsoft Entra app-only token instead of a stored key, running as a service account.
+  # Rendered as top-level `workload_identity` in config.json. Requires Entra SSO (bifrost.scim).
+  # workloadIdentity:
+  #   connections:
+  #     - id: "aks-payments"              # stable id; config.json rows are matched by it
+  #       name: "AKS payments-api"
+  #       platform: "entra"
+  #       object_id: "5b1e2c7a-0000-0000-0000-000000000000"  # service principal object ID (token oid)
+  #       required_app_role: "Gateway.Invoke"  # optional: the token's roles must include it
+  #       service_account: "svc-payments"      # service account name; or service_account_id
+  #       # service_account_id: ""
+  #       # enabled: true
 
   # Access profiles (enterprise): seed RBAC access profile templates from Helm.
   # This is rendered directly as top-level `access_profiles` in config.json.

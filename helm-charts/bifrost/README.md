@@ -4,9 +4,14 @@
 
 Official Helm charts for deploying [Bifrost](https://github.com/maximhq/bifrost) - a high-performance AI gateway with unified interface for multiple providers.
 
-**Latest Version:** 2.1.47
+**Latest Version:** 2.1.48
 
 ## Changelog
+
+### Upcoming
+
+- Added `bifrost.workloadIdentity.connections` (`workload_identity.connections`, enterprise): connect a Microsoft Entra managed identity or app (`object_id`) to a service account by `service_account` name or `service_account_id`, with an optional `required_app_role`, so the workload calls Bifrost with its Entra token instead of a stored key. Rendering fails unless exactly one service account reference is set.
+- Added `enforceAccessTokenAudience` to the Entra `bifrost.scim.config` (`scim_config.config.enforceAccessTokenAudience`): when true, bearer tokens Entra issued for other apps in the tenant are rejected. Off by default.
 
 ### 2.1.47
 

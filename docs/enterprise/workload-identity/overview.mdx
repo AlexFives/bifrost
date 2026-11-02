@@ -1,0 +1,83 @@
+---
+title: "Workload Identity"
+description: "Let CI pipelines and cloud workloads call Bifrost with a short-lived token from their own platform, running as a service account, with no stored keys."
+icon: "fingerprint"
+---
+
+Workload identity federation lets a non-human caller, such as a CI pipeline, an AKS service or an Azure Function, call Bifrost's inference endpoints without a stored virtual key. The workload sends a short-lived token its own platform issues, and Bifrost runs the request as the **service account** an admin connected it to. That service account's access profile decides the models, MCP tools, budget and rate limits, and logs and audit entries name it.
+
+Microsoft Entra is the first supported platform. See [Microsoft Entra](./entra) for setup.
+
+<Info>
+  Tokens are verified on every request and are never stored. A workload's access ends when its token expires and it can't get a new one, or as soon as you disable or remove its connection.
+</Info>
+
+## How it works
+
+1. The workload asks its platform for a token addressed to Bifrost. For Entra, that is an app-only token for the Bifrost SSO app registration.
+2. It calls an inference endpoint with `Authorization: Bearer <token>` and no virtual key.
+3. Bifrost checks that the token comes from a platform it trusts, is addressed to Bifrost, and was issued to an application rather than a person. A person's SSO token is left to the normal sign-in path.
+4. Bifrost verifies the signature against the platform's published keys, then the expiry and lifetime.
+5. It looks up the connection for the token's identity (for Entra, the service principal's object ID) and, if the connection requires an app role, checks the token carries it.
+6. The request runs as the connected service account. The token is removed from the request, so it is never forwarded to a provider.
+
+Workload identity turns on once at least one connection exists. Until then, every request goes through the rest of authentication unchanged.
+
+## Connecting a workload
+
+Workloads always run as a **service account**, never as a person. Create one under **Governance → Users** and give it an access profile first.
+
+Then connect the workload in either place:
+
+- **From the service account:** open it, go to **Workload identities**, and select **Connect workload**.
+- **From Governance → Workload Identity:** select **Connect workload** and choose the service account.
+
+You can pick the workload from your identity provider's directory or enter its identifier. After saving, Bifrost shows the snippet the workload uses and marks the connection **Connected** once its first request arrives.
+
+### Refused calls
+
+When a workload with a valid token calls Bifrost before it is connected, Bifrost refuses the call and lists it under **Refused calls** on the Workload Identity page, and under **Recently refused** on service accounts. Each entry shows the workload's identity, how many times it was refused and when. Select **Connect** to connect it without looking its identifier up. Bifrost stores the identity's claims only, never the token, and keeps entries for 7 days.
+
+## Declarative configuration
+
+Connections can also live in `config.json`, or in Helm values under `bifrost.workloadIdentity`:
+
+```json
+{
+  "workload_identity": {
+    "connections": [
+      {
+        "id": "aks-payments",
+        "name": "AKS payments-api",
+        "platform": "entra",
+        "object_id": "5b1e2c7a-0000-0000-0000-000000000000",
+        "required_app_role": "Gateway.Invoke",
+        "service_account": "svc-payments"
+      }
+    ]
+  }
+}
+```
+
+- Reference the service account by `service_account` (its name) or `service_account_id`, not both. A name is pinned to the account once exactly one service account has it. Until then the connection refuses tokens.
+- Connections from the file are marked **config.json** in the dashboard and can only be disabled there, as an emergency switch. Edit or remove them in the file.
+- When config.json is the source of truth, connections missing from the file are removed at startup.
+
+## Responses
+
+| Status | When |
+|---|---|
+| `400` | A virtual key was sent together with a workload token. Send one credential. |
+| `401` | The token is invalid: bad signature, expired, issued for another app, or valid for longer than 24 hours. Get a new token. |
+| `403` | The token is valid, but no service account is connected to it, it lacks the required app role, the connection is disabled, or the service account was deleted. An admin needs to act. |
+| `503` | Bifrost couldn't fetch the platform's signing keys. Retry after the `Retry-After` delay. |
+
+A service account with no access profile is refused by governance with an access-not-found error, as for any user without one.
+
+## MCP gateway
+
+Workload tokens work on `/mcp` too, governed by the service account's access profile like any other request. When the MCP gateway's auth mode is **OAuth only**, it accepts only tokens Bifrost issued, so workload tokens are refused there.
+
+## Permissions
+
+Managing connections needs the **Workload Identity** permission. Admins have full access and viewers can see connections. Developers have none by default, because a connection lets an outside workload act as a service account. Connecting a workload also requires being able to see the service account.

@@ -1,0 +1,112 @@
+---
+title: "Microsoft Entra"
+description: "Connect Azure managed identities and app registrations to Bifrost service accounts so AKS services, Azure Functions and CI pipelines call Bifrost with their Entra token."
+icon: "microsoft"
+---
+
+With Microsoft Entra, a workload calls Bifrost with an **app-only access token** Entra issues for the Bifrost SSO app registration. This covers AKS services using Azure workload identity, Azure VMs and Functions with a managed identity, and Azure DevOps or GitHub pipelines that sign in to Entra with federated credentials. The token's `oid` claim, the object ID of the workload's service principal, is what you connect to a service account.
+
+<Info>
+  Workload identity reuses your Entra SSO configuration: the same tenant and app registration. Set up [Entra SSO](../setting-up-entra/oidc) first. Multi-tenant (`common`) configurations are not supported.
+</Info>
+
+## Prerequisites
+
+- Microsoft Entra SSO configured in Bifrost, with the app registration's **Application.Read.All** Graph permission granted if you want to pick workloads from Entra in the dashboard.
+- A service account in Bifrost with an access profile for the workload.
+
+## Step 1: Expose the Bifrost app to applications
+
+Workloads request a token for the Bifrost app registration, so it needs an identifier and, ideally, an app role you can assign.
+
+1. In the Entra admin center, open **App registrations** and select the Bifrost SSO app.
+2. Under **Expose an API**, set the **Application ID URI**, for example `api://bifrost`. Enter the same value as **App ID URI** in Bifrost's Entra SSO settings.
+3. Under **App roles**, create a role with **Allowed member types** set to **Applications**, for example value `Gateway.Invoke`.
+
+<Tip>
+  An app role lets you require it on the connection, so removing the role in Entra cuts the workload off from Entra's side too.
+</Tip>
+
+## Step 2: Assign the role to the workload
+
+Assign the app role to each managed identity or app that should call Bifrost. Managed identities can't be assigned in the portal, so use Microsoft Graph:
+
+```bash
+# Object ID of the workload's service principal (Enterprise applications → the identity → Object ID)
+WORKLOAD_OID="<workload service principal object ID>"
+# Object ID of the Bifrost enterprise application, and the app role's ID
+BIFROST_SP_OID="<Bifrost enterprise application object ID>"
+APP_ROLE_ID="<Gateway.Invoke app role ID>"
+
+az rest --method POST \
+  --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$WORKLOAD_OID/appRoleAssignments" \
+  --body "{\"principalId\":\"$WORKLOAD_OID\",\"resourceId\":\"$BIFROST_SP_OID\",\"appRoleId\":\"$APP_ROLE_ID\"}"
+```
+
+Assigned workloads then appear in Bifrost's **Pick from Entra** list.
+
+## Step 3: Connect the workload in Bifrost
+
+1. Open the service account under **Governance → Users** and go to **Workload identities**.
+2. Select **Connect workload**.
+3. Pick the workload from Entra, or select **Enter object ID** and paste its service principal's object ID. Use the object ID, not the application (client) ID.
+4. Optionally choose a **Required app role**, such as `Gateway.Invoke`.
+5. Select **Connect**. Bifrost shows the token scope and a snippet, and marks the connection **Connected** after the first request.
+
+## Step 4: Call Bifrost from the workload
+
+The workload requests a token for the Bifrost app, using the scope shown in Bifrost (the App ID URI or client ID with `/.default`), and sends it as the bearer token.
+
+<Tabs>
+  <Tab title="Python (AKS, VM, Functions)">
+```python
+from azure.identity import DefaultAzureCredential
+import requests
+
+token = DefaultAzureCredential().get_token("api://bifrost/.default").token
+
+requests.post(
+    "https://bifrost.example.com/v1/chat/completions",
+    headers={"Authorization": f"Bearer {token}"},
+    json={"model": "openai/gpt-4o-mini", "messages": [{"role": "user", "content": "ping"}]},
+)
+```
+On AKS, enable Azure workload identity for the pod (the `azure.workload.identity/use` label and a service account annotated with the managed identity's client ID). `DefaultAzureCredential` then picks it up without a secret.
+  </Tab>
+  <Tab title="Azure CLI">
+```bash
+TOKEN=$(az account get-access-token --scope api://bifrost/.default --query accessToken -o tsv)
+curl https://bifrost.example.com/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d @request.json
+```
+  </Tab>
+  <Tab title="GitHub Actions">
+```yaml
+permissions:
+  id-token: write
+steps:
+  - uses: azure/login@v2
+    with:
+      client-id: ${{ vars.CI_CLIENT_ID }}
+      tenant-id: ${{ vars.TENANT_ID }}
+      allow-no-subscriptions: true
+  - run: |
+      TOKEN=$(az account get-access-token --scope api://bifrost/.default --query accessToken -o tsv)
+      curl https://bifrost.example.com/v1/chat/completions \
+        -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d @request.json
+```
+The CI app registration needs a federated credential for the repository, and its service principal is the one you connect.
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+**401 invalid workload identity token.** The token is expired, was issued for another app, or is valid for over 24 hours. Check that the scope is the Bifrost app's App ID URI or client ID with `/.default`. If the app registration issues v1 tokens (`accessTokenAcceptedVersion` unset or 1), the token's audience is the App ID URI, so make sure it is set in Bifrost's Entra SSO settings.
+
+**403 not connected to a Bifrost service account.** The message includes the token's object ID. Connect it, or find it under **Refused calls**.
+
+**403 the token does not carry the required app role.** Assign the role in Step 2, then get a new token: roles are fixed when the token is issued.
+
+**The workload isn't in Pick from Entra.** Only service principals assigned to the Bifrost enterprise application are listed. Assign an app role (Step 2) or enter the object ID manually.
+
+**A person's SSO stops working.** It shouldn't: workload identity only takes app-only tokens. A person's token always carries the `scp` claim and goes through the normal sign-in path.

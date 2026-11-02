@@ -1027,6 +1027,18 @@ false
 {{- if .Values.bifrost.accessProfiles }}
 {{- $_ := set $config "access_profiles" .Values.bifrost.accessProfiles }}
 {{- end }}
+{{- /* Workload Identity (Enterprise) */ -}}
+{{- if and .Values.bifrost.workloadIdentity .Values.bifrost.workloadIdentity.connections }}
+{{- range .Values.bifrost.workloadIdentity.connections }}
+{{- if or (not .id) (not .name) (not .platform) (not .object_id) }}
+{{- fail "ERROR: bifrost.workloadIdentity.connections[] needs id, name, platform and object_id." }}
+{{- end }}
+{{- if eq (and (hasKey . "service_account") (hasKey . "service_account_id")) (or (hasKey . "service_account") (hasKey . "service_account_id")) }}
+{{- fail (printf "ERROR: workload identity connection '%s' needs exactly one of service_account and service_account_id." .id) }}
+{{- end }}
+{{- end }}
+{{- $_ := set $config "workload_identity" .Values.bifrost.workloadIdentity }}
+{{- end }}
 {{- /* Alerting */ -}}
 {{- if .Values.bifrost.alerting }}
 {{- if .Values.bifrost.alerting.rules }}

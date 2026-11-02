@@ -3736,6 +3736,11 @@
                         "format": "uri",
                         "description": "App ID URI for v1.0 tokens (e.g., api://{clientId})"
                       },
+                      "enforceAccessTokenAudience": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Reject bearer access tokens whose audience is not this app (clientId, appIdUri or audience)"
+                      },
                       "userIdField": {
                         "type": "string",
                         "description": "JWT claim field for user ID (default: 'oid')",
@@ -4899,6 +4904,32 @@
               }
             }
           }
+        },
+        "workloadIdentity": {
+          "type": "object",
+          "description": "Enterprise workload identity federation, rendered as top-level workload_identity in config.json",
+          "properties": {
+            "connections": {
+              "type": "array",
+              "description": "Workload identities allowed to run as a service account",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "description": "Stable identifier; config.json rows are matched by it" },
+                  "name": { "type": "string", "minLength": 1, "description": "Display name" },
+                  "platform": { "type": "string", "enum": ["entra"], "description": "Platform that issues the workload's token" },
+                  "object_id": { "type": "string", "minLength": 1, "description": "Entra service principal object ID (the token's oid claim)" },
+                  "required_app_role": { "type": "string", "description": "App role the token's roles claim must contain" },
+                  "service_account": { "type": "string", "minLength": 1, "description": "Name of the service account the workload runs as" },
+                  "service_account_id": { "type": "string", "minLength": 1, "description": "ID of the service account the workload runs as" },
+                  "enabled": { "type": "boolean", "default": true, "description": "false keeps the connection but refuses its tokens" }
+                },
+                "required": ["id", "name", "platform", "object_id"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
         },
         "alerting": {
           "type": "object",
