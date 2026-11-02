@@ -3859,7 +3859,9 @@ func toAnthropicResponsesStreamEvents(ctx *schemas.BifrostContext, bifrostResp *
 			}
 		}
 
-	case schemas.ResponsesStreamResponseTypeReasoningSummaryTextDelta:
+	case schemas.ResponsesStreamResponseTypeReasoningSummaryTextDelta,
+		// Raw reasoning (vLLM, gpt-oss) streams as reasoning_text.delta; Anthropic has one thinking_delta for both.
+		schemas.ResponsesStreamResponseTypeReasoningTextDelta:
 		state := getOrCreateAnthropicToResponsesStreamState(ctx)
 		key := reverseStreamItemKey(bifrostResp)
 		idx := state.blockIndexFor(key)
