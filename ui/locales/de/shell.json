@@ -41,6 +41,7 @@
 		"businessUnits": "Geschäftsbereiche",
 		"customers": "Kunden",
 		"userProvisioning": "Benutzer-Provisioning",
+		"workloadIdentity": "Workload-Identität",
 		"rolesPermissions": "Rollen & Berechtigungen",
 		"accessProfiles": "Zugriffsprofile",
 		"projects": "Projekte",
@@ -123,6 +124,7 @@
 		"businessUnits": "Geschäftsbereiche verwalten",
 		"customers": "Kunden verwalten",
 		"userProvisioning": "Benutzerverwaltung und Provisionierung",
+		"workloadIdentity": "CI- und Cloud-Workloads ohne Schlüssel mit Bifrost verbinden",
 		"rolesPermissions": "Benutzerrollen und Berechtigungen",
 		"accessProfiles": "Zugriffsprofile für Rollen verwalten",
 		"projects": "Anfragen auf den Zugriff und das Budget eines Projekts beschränken",
@@ -320,7 +322,12 @@
 		"promptRepository": "Prompt-Repository",
 		"modelProviders": "Modellanbieter",
 		"routingTree": "Routing-Baum",
-		"userProvisioning": "Benutzer-Provisioning"
+		"userProvisioning": "Benutzer-Provisioning",
+		"workloadIdentity": "Workload-Identität"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "Workload-Identitätsföderation freischalten",
+		"unlockDescription": "CI-Pipelines und Cloud-Workloads rufen Bifrost mit einem Token ihrer eigenen Plattform als Dienstkonto auf, ganz ohne gespeicherte Schlüssel. Verfügbar in Bifrost Enterprise."
 	},
 	"error": {
 		"title": "Etwas ist schiefgelaufen",

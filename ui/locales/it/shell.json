@@ -41,6 +41,7 @@
 		"businessUnits": "Business unit",
 		"customers": "Clienti",
 		"userProvisioning": "Provisioning utenti",
+		"workloadIdentity": "Identità dei carichi di lavoro",
 		"rolesPermissions": "Ruoli e autorizzazioni",
 		"accessProfiles": "Profili di accesso",
 		"projects": "Progetti",
@@ -123,6 +124,7 @@
 		"businessUnits": "Gestisci le business unit",
 		"customers": "Gestisci i clienti",
 		"userProvisioning": "Gestione e provisioning utenti",
+		"workloadIdentity": "Collega i carichi CI e cloud a Bifrost senza chiavi",
 		"rolesPermissions": "Ruoli e autorizzazioni utente",
 		"accessProfiles": "Gestisci i profili di accesso per i ruoli",
 		"projects": "Limita le richieste all'accesso e al budget di un progetto",
@@ -320,7 +322,12 @@
 		"promptRepository": "Repository prompt",
 		"modelProviders": "Provider di modelli",
 		"routingTree": "Albero di routing",
-		"userProvisioning": "Provisioning utenti"
+		"userProvisioning": "Provisioning utenti",
+		"workloadIdentity": "Identità dei carichi di lavoro"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "Sblocca la federazione delle identità dei carichi di lavoro",
+		"unlockDescription": "Le pipeline CI e i carichi cloud chiamano Bifrost con un token della propria piattaforma, come account di servizio e senza chiavi salvate. Disponibile in Bifrost Enterprise."
 	},
 	"error": {
 		"title": "Qualcosa è andato storto",

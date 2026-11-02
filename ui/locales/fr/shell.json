@@ -39,6 +39,7 @@
 		"businessUnits": "Unités commerciales",
 		"customers": "Clients",
 		"userProvisioning": "Provisionnement des utilisateurs",
+		"workloadIdentity": "Identité des charges de travail",
 		"rolesPermissions": "Rôles et permissions",
 		"accessProfiles": "Profils d’accès",
 		"projects": "Projets",
@@ -121,6 +122,7 @@
 		"businessUnits": "Gérer les unités commerciales",
 		"customers": "Gérer les clients",
 		"userProvisioning": "Gestion et provisionnement des utilisateurs",
+		"workloadIdentity": "Connecter les charges CI et cloud à Bifrost sans clés",
 		"rolesPermissions": "Rôles et permissions des utilisateurs",
 		"accessProfiles": "Gérer les profils d’accès des rôles",
 		"projects": "Limiter les requêtes à l’accès et au budget d’un projet",
@@ -320,7 +322,12 @@
 		"promptRepository": "Dépôt de prompts",
 		"modelProviders": "Fournisseurs de modèles",
 		"routingTree": "Arbre de routage",
-		"userProvisioning": "Provisionnement des utilisateurs"
+		"userProvisioning": "Provisionnement des utilisateurs",
+		"workloadIdentity": "Identité des charges de travail"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "Débloquer la fédération d'identité des charges de travail",
+		"unlockDescription": "Les pipelines CI et les charges cloud appellent Bifrost avec un jeton de leur propre plateforme, en tant que compte de service, sans clé stockée. Disponible dans Bifrost Enterprise."
 	},
 	"error": {
 		"title": "Une erreur s’est produite",

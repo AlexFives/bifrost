@@ -14,6 +14,7 @@ import {
 	Construction,
 	Database,
 	DatabaseZap,
+	Fingerprint,
 	Flag,
 	FolderGit,
 	Gavel,
@@ -134,6 +135,7 @@ export function useNavItems(): NavItem[] {
 	const hasPluginsAccess = useRbac(RbacResource.Plugins, RbacOperation.View);
 	const hasUsersAccess = useRbac(RbacResource.Users, RbacOperation.View);
 	const hasUserProvisioningAccess = useRbac(RbacResource.UserProvisioning, RbacOperation.View);
+	const hasWorkloadIdentityAccess = useRbac(RbacResource.WorkloadIdentity, RbacOperation.View);
 	const hasAuditLogsAccess = useRbac(RbacResource.AuditLogs, RbacOperation.View);
 	const hasCustomersAccess = useRbac(RbacResource.Customers, RbacOperation.View);
 	const hasTeamsAccess = useRbac(RbacResource.Teams, RbacOperation.View);
@@ -169,6 +171,7 @@ export function useNavItems(): NavItem[] {
 		hasRbacAccess ||
 		hasAccessProfilesAccess ||
 		hasProjectsAccess ||
+		hasWorkloadIdentityAccess ||
 		hasGovernanceLegacyAccess;
 	const { data: coreConfig } = useGetCoreConfigQuery({});
 	const isDbConnected = coreConfig?.is_db_connected ?? false;
@@ -522,6 +525,15 @@ export function useNavItems(): NavItem[] {
 						hasAccess: hasUserProvisioningAccess,
 					},
 					{
+						id: "governance.workload-identity",
+						title: t("nav.workloadIdentity"),
+						url: "/workspace/workload-identity",
+						enterpriseOnly: true,
+						icon: Fingerprint,
+						description: t("navDesc.workloadIdentity"),
+						hasAccess: hasWorkloadIdentityAccess,
+					},
+					{
 						id: "governance.rbac",
 						title: t("nav.rolesPermissions"),
 						url: "/workspace/governance/rbac",
@@ -860,6 +872,7 @@ export function useNavItems(): NavItem[] {
 			hasPluginsAccess,
 			hasUsersAccess,
 			hasUserProvisioningAccess,
+			hasWorkloadIdentityAccess,
 			hasAuditLogsAccess,
 			hasCustomersAccess,
 			hasTeamsAccess,

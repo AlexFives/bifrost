@@ -66,6 +66,7 @@ const routeTitleOverrides: Record<string, string> = {
 	"/workspace/providers": "Model Providers",
 	"/workspace/routing-rules/tree": "Routing Tree",
 	"/workspace/scim": "User Provisioning",
+	"/workspace/workload-identity": "Workload Identity",
 };
 
 const routeTitleI18nKeys: Partial<Record<string, ParseKeys<"shell">>> = {
@@ -89,6 +90,7 @@ const routeTitleI18nKeys: Partial<Record<string, ParseKeys<"shell">>> = {
 	"/workspace/providers": "titles.modelProviders",
 	"/workspace/routing-rules/tree": "titles.routingTree",
 	"/workspace/scim": "titles.userProvisioning",
+	"/workspace/workload-identity": "titles.workloadIdentity",
 };
 
 function pathKey(pathname: string): string {

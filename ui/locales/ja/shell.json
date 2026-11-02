@@ -41,6 +41,7 @@
 		"businessUnits": "ビジネスユニット",
 		"customers": "顧客",
 		"userProvisioning": "ユーザープロビジョニング",
+		"workloadIdentity": "ワークロード ID",
 		"rolesPermissions": "ロールと権限",
 		"accessProfiles": "アクセスプロファイル",
 		"projects": "プロジェクト",
@@ -123,6 +124,7 @@
 		"businessUnits": "ビジネスユニットを管理",
 		"customers": "顧客を管理",
 		"userProvisioning": "ユーザー管理とプロビジョニング",
+		"workloadIdentity": "CI やクラウドのワークロードをキーなしで Bifrost に接続",
 		"rolesPermissions": "ユーザーロールと権限",
 		"accessProfiles": "ロール向けアクセスプロファイルを管理",
 		"projects": "リクエストをプロジェクトのアクセスと予算に紐づけ",
@@ -320,7 +322,12 @@
 		"promptRepository": "プロンプトリポジトリ",
 		"modelProviders": "モデルプロバイダー",
 		"routingTree": "ルーティングツリー",
-		"userProvisioning": "ユーザープロビジョニング"
+		"userProvisioning": "ユーザープロビジョニング",
+		"workloadIdentity": "ワークロード ID"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "ワークロード ID フェデレーションを有効にする",
+		"unlockDescription": "CI パイプラインやクラウドのワークロードが、自身のプラットフォームのトークンを使い、サービスアカウントとして Bifrost を呼び出せます。保存されたキーは不要です。Bifrost Enterprise で利用できます。"
 	},
 	"error": {
 		"title": "問題が発生しました",

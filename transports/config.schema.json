@@ -5426,6 +5426,9 @@
     "access_profiles": {
       "$ref": "#/$defs/access_profiles"
     },
+    "workload_identity": {
+      "$ref": "#/$defs/workload_identity_config"
+    },
     "feature_flags": {
       "$ref": "#/$defs/feature_flags_config"
     },
@@ -11263,6 +11266,11 @@
           "format": "uri",
           "description": "App ID URI for v1.0 tokens (e.g., api://{clientId})"
         },
+        "enforceAccessTokenAudience": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reject bearer access tokens whose audience is not this app (clientId, appIdUri or audience). Off by default for compatibility; turn on so tokens Entra issued for other apps in the tenant are not accepted."
+        },
         "userIdField": {
           "type": "string",
           "description": "JWT claim field for user ID (default: 'oid')",
@@ -12329,6 +12337,86 @@
           }
         }
       },
+      "additionalProperties": false
+    },
+    "workload_identity_config": {
+      "type": "object",
+      "description": "Enterprise workload identity federation: lets a CI pipeline or cloud workload call inference endpoints with a short-lived token from its own platform, running as a Bifrost service account instead of using a stored key.",
+      "properties": {
+        "connections": {
+          "type": "array",
+          "description": "Workload identities allowed to run as a service account. Each one is matched by the identity its platform puts in the token.",
+          "items": {
+            "$ref": "#/$defs/workload_identity_connection"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "workload_identity_connection": {
+      "type": "object",
+      "description": "One workload identity connected to a service account.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identifier for this connection. Bifrost matches file entries to stored rows by this value."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name, e.g. 'AKS payments-api'."
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "entra"
+          ],
+          "description": "Platform that issues the workload's token. 'entra' accepts Microsoft Entra app-only tokens issued for the Bifrost SSO app registration."
+        },
+        "object_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "For 'entra': the object ID of the managed identity or application's service principal (the token's oid claim)."
+        },
+        "required_app_role": {
+          "type": "string",
+          "description": "Optional app role value the token's roles claim must contain."
+        },
+        "service_account": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the service account the workload runs as. It must match exactly one service account."
+        },
+        "service_account_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "ID of the service account the workload runs as. Use instead of service_account."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Set to false to keep the connection but refuse its tokens."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "platform",
+        "object_id"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "service_account"
+          ]
+        },
+        {
+          "required": [
+            "service_account_id"
+          ]
+        }
+      ],
       "additionalProperties": false
     },
     "access_profiles": {

@@ -41,6 +41,7 @@
 		"businessUnits": "Unidades de negócio",
 		"customers": "Clientes",
 		"userProvisioning": "Aprovisionamento de utilizadores",
+		"workloadIdentity": "Identidade de cargas de trabalho",
 		"rolesPermissions": "Funções e permissões",
 		"accessProfiles": "Perfis de acesso",
 		"projects": "Projetos",
@@ -123,6 +124,7 @@
 		"businessUnits": "Gerir unidades de negócio",
 		"customers": "Gerir clientes",
 		"userProvisioning": "Gestão e aprovisionamento de utilizadores",
+		"workloadIdentity": "Conecte cargas de CI e nuvem ao Bifrost sem chaves",
 		"rolesPermissions": "Funções e permissões de utilizador",
 		"accessProfiles": "Gerir perfis de acesso para funções",
 		"projects": "Limitar pedidos ao acesso e orçamento de um projeto",
@@ -320,7 +322,12 @@
 		"promptRepository": "Repositório de prompts",
 		"modelProviders": "Fornecedores de modelos",
 		"routingTree": "Árvore de encaminhamento",
-		"userProvisioning": "Aprovisionamento de utilizadores"
+		"userProvisioning": "Aprovisionamento de utilizadores",
+		"workloadIdentity": "Identidade de cargas de trabalho"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "Desbloqueie a federação de identidade de cargas de trabalho",
+		"unlockDescription": "Pipelines de CI e cargas na nuvem chamam o Bifrost com um token da própria plataforma, como uma conta de serviço e sem chaves armazenadas. Disponível no Bifrost Enterprise."
 	},
 	"error": {
 		"title": "Algo correu mal",

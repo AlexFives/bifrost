@@ -171,6 +171,35 @@ func TestValidateConfigSchema_GlobalProxyTypes(t *testing.T) {
 	}
 }
 
+// TestValidateConfigSchema_WorkloadIdentity pins the workload_identity section: a connection
+// names its platform, the workload's identity and exactly one service account reference.
+func TestValidateConfigSchema_WorkloadIdentity(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		connection string
+		valid      bool
+	}{
+		{"by service account name", `{"id": "ci", "name": "CI", "platform": "entra", "object_id": "5b1e2c7a", "required_app_role": "Gateway.Invoke", "service_account": "svc-ci"}`, true},
+		{"by service account id", `{"id": "ci", "name": "CI", "platform": "entra", "object_id": "5b1e2c7a", "service_account_id": "u-1", "enabled": false}`, true},
+		{"both service account references", `{"id": "ci", "name": "CI", "platform": "entra", "object_id": "5b1e2c7a", "service_account": "svc-ci", "service_account_id": "u-1"}`, false},
+		{"no service account reference", `{"id": "ci", "name": "CI", "platform": "entra", "object_id": "5b1e2c7a"}`, false},
+		{"unknown platform", `{"id": "ci", "name": "CI", "platform": "github", "object_id": "repo:acme/app", "service_account": "svc-ci"}`, false},
+		{"missing object id", `{"id": "ci", "name": "CI", "platform": "entra", "service_account": "svc-ci"}`, false},
+		{"unknown field", `{"id": "ci", "name": "CI", "platform": "entra", "object_id": "5b1e2c7a", "service_account": "svc-ci", "allow_mcp": true}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config := `{"workload_identity": {"connections": [` + tc.connection + `]}}`
+			err := ValidateConfigSchema([]byte(config), loadLocalSchema(t))
+			if tc.valid && err != nil {
+				t.Fatalf("expected connection to pass validation: %v", err)
+			}
+			if !tc.valid && err == nil {
+				t.Fatal("expected connection to fail validation")
+			}
+		})
+	}
+}
+
 func TestValidateConfigSchema_WarpSection(t *testing.T) {
 	validConfig := `{
 		"warp": {

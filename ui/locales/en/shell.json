@@ -41,6 +41,7 @@
 		"businessUnits": "Business Units",
 		"customers": "Customers",
 		"userProvisioning": "User Provisioning",
+		"workloadIdentity": "Workload Identity",
 		"rolesPermissions": "Roles & Permissions",
 		"accessProfiles": "Access Profiles",
 		"projects": "Projects",
@@ -123,6 +124,7 @@
 		"businessUnits": "Manage business units",
 		"customers": "Manage customers",
 		"userProvisioning": "User management and provisioning",
+		"workloadIdentity": "Let CI and cloud workloads call Bifrost without keys",
 		"rolesPermissions": "User roles and permissions",
 		"accessProfiles": "Manage access profiles for roles",
 		"projects": "Scope requests to a project's access and budget",
@@ -320,7 +322,12 @@
 		"promptRepository": "Prompt Repository",
 		"modelProviders": "Model Providers",
 		"routingTree": "Routing Tree",
-		"userProvisioning": "User Provisioning"
+		"userProvisioning": "User Provisioning",
+		"workloadIdentity": "Workload Identity"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "Unlock workload identity federation",
+		"unlockDescription": "Let CI pipelines and cloud workloads call Bifrost with a token from their own platform, running as a service account, with no stored keys. Available in Bifrost Enterprise."
 	},
 	"error": {
 		"title": "Something went wrong",

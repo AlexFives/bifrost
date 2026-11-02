@@ -41,6 +41,7 @@
 		"businessUnits": "비즈니스 유닛",
 		"customers": "고객",
 		"userProvisioning": "사용자 프로비저닝",
+		"workloadIdentity": "워크로드 ID",
 		"rolesPermissions": "역할 및 권한",
 		"accessProfiles": "액세스 프로필",
 		"projects": "프로젝트",
@@ -123,6 +124,7 @@
 		"businessUnits": "비즈니스 유닛 관리",
 		"customers": "고객 관리",
 		"userProvisioning": "사용자 관리 및 프로비저닝",
+		"workloadIdentity": "키 없이 CI 및 클라우드 워크로드를 Bifrost에 연결",
 		"rolesPermissions": "사용자 역할 및 권한",
 		"accessProfiles": "역할용 액세스 프로필 관리",
 		"projects": "요청을 프로젝트의 액세스와 예산에 한정",
@@ -320,7 +322,12 @@
 		"promptRepository": "프롬프트 저장소",
 		"modelProviders": "모델 공급자",
 		"routingTree": "라우팅 트리",
-		"userProvisioning": "사용자 프로비저닝"
+		"userProvisioning": "사용자 프로비저닝",
+		"workloadIdentity": "워크로드 ID"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "워크로드 ID 페더레이션 사용",
+		"unlockDescription": "CI 파이프라인과 클라우드 워크로드가 자체 플랫폼의 토큰으로 서비스 계정으로서 Bifrost를 호출합니다. 저장된 키가 필요 없습니다. Bifrost Enterprise에서 사용할 수 있습니다."
 	},
 	"error": {
 		"title": "문제가 발생했어요",

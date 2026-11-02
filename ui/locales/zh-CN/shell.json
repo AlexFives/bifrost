@@ -41,6 +41,7 @@
 		"businessUnits": "业务单元",
 		"customers": "客户",
 		"userProvisioning": "用户配置",
+		"workloadIdentity": "工作负载身份",
 		"rolesPermissions": "角色与权限",
 		"accessProfiles": "访问配置",
 		"projects": "项目",
@@ -123,6 +124,7 @@
 		"businessUnits": "管理业务单元",
 		"customers": "管理客户",
 		"userProvisioning": "用户管理与配置",
+		"workloadIdentity": "无需密钥即可将 CI 和云工作负载连接到 Bifrost",
 		"rolesPermissions": "用户角色与权限",
 		"accessProfiles": "管理角色的访问配置",
 		"projects": "将请求限定到项目的访问与预算",
@@ -320,7 +322,12 @@
 		"promptRepository": "提示词仓库",
 		"modelProviders": "模型提供商",
 		"routingTree": "路由树",
-		"userProvisioning": "用户配置"
+		"userProvisioning": "用户配置",
+		"workloadIdentity": "工作负载身份"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "解锁工作负载身份联合",
+		"unlockDescription": "CI 流水线和云工作负载可使用其自身平台签发的令牌、以服务账号身份调用 Bifrost，无需存储密钥。适用于 Bifrost Enterprise。"
 	},
 	"error": {
 		"title": "出错了",

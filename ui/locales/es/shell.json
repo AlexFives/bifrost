@@ -41,6 +41,7 @@
 		"businessUnits": "Unidades de negocio",
 		"customers": "Clientes",
 		"userProvisioning": "Aprovisionamiento de usuarios",
+		"workloadIdentity": "Identidad de cargas de trabajo",
 		"rolesPermissions": "Roles y permisos",
 		"accessProfiles": "Perfiles de acceso",
 		"projects": "Proyectos",
@@ -123,6 +124,7 @@
 		"businessUnits": "Gestionar unidades de negocio",
 		"customers": "Gestionar clientes",
 		"userProvisioning": "Gestión y aprovisionamiento de usuarios",
+		"workloadIdentity": "Conecta cargas de CI y de nube a Bifrost sin claves",
 		"rolesPermissions": "Roles y permisos de usuario",
 		"accessProfiles": "Gestionar perfiles de acceso para roles",
 		"projects": "Limitar solicitudes al acceso y presupuesto de un proyecto",
@@ -320,7 +322,12 @@
 		"promptRepository": "Repositorio de prompts",
 		"modelProviders": "Proveedores de modelos",
 		"routingTree": "Árbol de enrutamiento",
-		"userProvisioning": "Aprovisionamiento de usuarios"
+		"userProvisioning": "Aprovisionamiento de usuarios",
+		"workloadIdentity": "Identidad de cargas de trabajo"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "Desbloquea la federación de identidades de cargas de trabajo",
+		"unlockDescription": "Permite que las canalizaciones de CI y las cargas en la nube llamen a Bifrost con un token de su propia plataforma, como una cuenta de servicio y sin claves almacenadas. Disponible en Bifrost Enterprise."
 	},
 	"error": {
 		"title": "Algo salió mal",

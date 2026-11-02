@@ -41,6 +41,7 @@
 		"businessUnits": "業務單元",
 		"customers": "客戶",
 		"userProvisioning": "使用者配置",
+		"workloadIdentity": "工作負載身分",
 		"rolesPermissions": "角色與許可權",
 		"accessProfiles": "存取配置",
 		"projects": "專案",
@@ -123,6 +124,7 @@
 		"businessUnits": "管理業務單元",
 		"customers": "管理客戶",
 		"userProvisioning": "使用者管理與配置",
+		"workloadIdentity": "無需金鑰即可將 CI 與雲端工作負載連接到 Bifrost",
 		"rolesPermissions": "使用者角色與許可權",
 		"accessProfiles": "管理角色的存取配置",
 		"projects": "將請求限定到專案的存取與預算",
@@ -320,7 +322,12 @@
 		"promptRepository": "提示詞倉庫",
 		"modelProviders": "模型供應商",
 		"routingTree": "路由樹",
-		"userProvisioning": "使用者配置"
+		"userProvisioning": "使用者配置",
+		"workloadIdentity": "工作負載身分"
+	},
+	"workloadIdentity": {
+		"unlockTitle": "解鎖工作負載身分同盟",
+		"unlockDescription": "CI 管線與雲端工作負載可使用其自身平台簽發的權杖、以服務帳戶身分呼叫 Bifrost，無需儲存金鑰。適用於 Bifrost Enterprise。"
 	},
 	"error": {
 		"title": "出錯了",
