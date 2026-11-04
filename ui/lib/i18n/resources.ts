@@ -7,6 +7,7 @@ import modelsEn from "@/locales/en/models.json";
 import mcpEn from "@/locales/en/mcp.json";
 import governanceEn from "@/locales/en/governance.json";
 import configEn from "@/locales/en/config.json";
+import keyUsageEn from "@/locales/en/keyUsage.json";
 
 export const NAMESPACES = [
 	"common",
@@ -17,6 +18,7 @@ export const NAMESPACES = [
 	"mcp",
 	"governance",
 	"config",
+	"keyUsage",
 	...ENTERPRISE_NAMESPACES,
 ] as const;
 
@@ -34,6 +36,7 @@ export const resources = {
 		mcp: mcpEn,
 		governance: governanceEn,
 		config: configEn,
+		keyUsage: keyUsageEn,
 	},
 } as const;
 

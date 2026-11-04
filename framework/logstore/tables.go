@@ -174,6 +174,10 @@ type SearchFilters struct {
 	// "use the store default" (defaultMaxRankingsLimit); a value <= 0 means
 	// "return every ranked entity", which is what the dashboard export uses.
 	RankingLimit *int `json:"ranking_limit,omitempty"`
+
+	// RequireExactTimeWindow excludes hourly materialized views whose buckets can
+	// include rows outside the requested window or lag behind the latest logs.
+	RequireExactTimeWindow bool `json:"-"`
 }
 
 // SessionGroupingActive reports whether this query should collapse each

@@ -1258,7 +1258,8 @@ func runMatViewRefreshTick(ctx context.Context, db *gorm.DB, gate *migrationLock
 // matview's answer is the same. TestSessionGroupingActiveImpliesRootsOnly pins
 // the implication this relies on.
 func canUseMatViewFilters(f SearchFilters) bool {
-	return f.ContentSearch == "" &&
+	return !f.RequireExactTimeWindow &&
+		f.ContentSearch == "" &&
 		f.RequestID == "" &&
 		f.ParentRequestID == "" &&
 		f.SessionID == "" &&

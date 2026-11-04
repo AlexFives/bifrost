@@ -1865,6 +1865,7 @@ func (h *GovernanceHandler) RegisterRoutesWithOverrides(r *router.Router, overri
 	// Self-service endpoint — no admin auth, VK in header is the credential.
 	// Registered without admin middlewares; only common middlewares (telemetry) are applied.
 	r.GET("/api/governance/virtual-keys/quota", h.getVirtualKeyQuota)
+	r.GET("/api/governance/virtual-keys/usage", h.getVirtualKeyUsage)
 }
 
 // registerTeamRoutes registers Team CRUD with optional edition-specific handlers.
@@ -5841,36 +5842,9 @@ func (h *GovernanceHandler) buildBudgetsWithUsage(ctx context.Context, vkID, usa
 // getVirtualKeyQuota handles GET /api/governance/virtual-keys/quota
 // This is a self-service endpoint — no admin auth required. The VK value in the header is the credential.
 func (h *GovernanceHandler) getVirtualKeyQuota(ctx *fasthttp.RequestCtx) {
-	// Extract virtual key using the same logic as the inference path (lib/ctx.go):
-	// x-bf-vk accepts any value; other headers require the sk-bf- prefix.
-	var vkValue string
-	if v := string(ctx.Request.Header.Peek("x-bf-vk")); v != "" {
-		vkValue = v
-	} else if v := governance.ParseVirtualKeyFromFastHTTPRequest(ctx); v != nil {
-		vkValue = *v
-	}
-	if vkValue == "" {
-		SendError(ctx, 401, "Missing virtual key. Provide it via x-bf-vk header, Authorization Bearer, x-api-key, x-goog-api-key, or api-key header.")
-		return
-	}
-
-	vk, err := h.configStore.GetVirtualKeyQuotaByValue(ctx, vkValue)
-	if err != nil {
-		if errors.Is(err, configstore.ErrNotFound) {
-			SendError(ctx, 401, "Virtual key not found")
-			return
-		}
-		SendError(ctx, 500, "Failed to retrieve virtual key")
-		return
-	}
-
-	// An expired key is spent: it cannot make requests, so it has no business
-	// reading its own governance data either. Matches the inference path's
-	// expiry rejection (resolver.go). Inactive keys are deliberately still
-	// served - the response carries is_active so a dashboard can explain that
-	// state, and reactivation is a live option.
-	if vk.IsExpiredAt(time.Now().UTC()) {
-		SendError(ctx, 403, "Virtual key has expired")
+	ctx.Response.Header.Set("Cache-Control", "private, no-store")
+	vk, ok := h.selfServiceVirtualKey(ctx)
+	if !ok {
 		return
 	}
 
@@ -5930,4 +5904,41 @@ func (h *GovernanceHandler) getVirtualKeyQuota(ctx *fasthttp.RequestCtx) {
 		"provider_configs": vk.ProviderConfigs,
 		"model_configs":    models,
 	})
+}
+
+// selfServiceVirtualKey authenticates quota and usage requests with the virtual key itself.
+func (h *GovernanceHandler) selfServiceVirtualKey(ctx *fasthttp.RequestCtx) (*configstoreTables.TableVirtualKey, bool) {
+	// Extract virtual key using the same logic as the inference path (lib/ctx.go):
+	// x-bf-vk accepts any value; other headers require the sk-bf- prefix.
+	var vkValue string
+	if v := string(ctx.Request.Header.Peek("x-bf-vk")); v != "" {
+		vkValue = v
+	} else if v := governance.ParseVirtualKeyFromFastHTTPRequest(ctx); v != nil {
+		vkValue = *v
+	}
+	if vkValue == "" {
+		SendError(ctx, 401, "Missing virtual key. Provide it via x-bf-vk header, Authorization Bearer, x-api-key, x-goog-api-key, or api-key header.")
+		return nil, false
+	}
+
+	vk, err := h.configStore.GetVirtualKeyQuotaByValue(ctx, vkValue)
+	if err != nil {
+		if errors.Is(err, configstore.ErrNotFound) {
+			SendError(ctx, 401, "Virtual key not found")
+			return nil, false
+		}
+		SendError(ctx, 500, "Failed to retrieve virtual key")
+		return nil, false
+	}
+
+	// An expired key is spent: it cannot make requests, so it has no business
+	// reading its own governance data either. Matches the inference path's
+	// expiry rejection (resolver.go). Inactive keys are deliberately still
+	// served - the response carries is_active so a dashboard can explain that
+	// state, and reactivation is a live option.
+	if vk.IsExpiredAt(time.Now().UTC()) {
+		SendError(ctx, 403, "Virtual key has expired")
+		return nil, false
+	}
+	return vk, true
 }
