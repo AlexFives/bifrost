@@ -26,6 +26,14 @@ const budgetList = z
 	.array(budgetSchema)
 	.nullish()
 	.transform((value) => value ?? []);
+const providerBalanceSchema = z.object({
+	provider: z.string(),
+	key_name: z.string().optional(),
+	currency: z.string().optional(),
+	balance: z.number().optional(),
+	status: z.enum(["available", "unavailable"]),
+	can_aggregate: z.boolean(),
+});
 const quotaSchema = z.object({
 	virtual_key_name: z.string(),
 	is_active: z.boolean(),
@@ -43,6 +51,10 @@ const quotaSchema = z.object({
 				rate_limit: rateLimitSchema.nullish(),
 			}),
 		)
+		.nullish()
+		.transform((value) => value ?? []),
+	provider_balances: z
+		.array(providerBalanceSchema)
 		.nullish()
 		.transform((value) => value ?? []),
 	model_configs: z

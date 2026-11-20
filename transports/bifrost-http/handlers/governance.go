@@ -5894,15 +5894,21 @@ func (h *GovernanceHandler) getVirtualKeyQuota(ctx *fasthttp.RequestCtx) {
 		SendError(ctx, 500, "Failed to load per-model usage")
 		return
 	}
+	providerConfigs := make([]configstoreTables.TableVirtualKeyProviderConfig, len(vk.ProviderConfigs))
+	copy(providerConfigs, vk.ProviderConfigs)
+	for i := range providerConfigs {
+		providerConfigs[i].Keys = nil
+	}
 
 	SendJSON(ctx, map[string]interface{}{
-		"virtual_key_name": vk.Name,
-		"is_active":        vk.IsActiveValue(),
-		"budgets":          budgets,
-		"rate_limit":       rateLimit,
-		"rate_limits":      rateLimits,
-		"provider_configs": vk.ProviderConfigs,
-		"model_configs":    models,
+		"virtual_key_name":  vk.Name,
+		"is_active":         vk.IsActiveValue(),
+		"budgets":           budgets,
+		"rate_limit":        rateLimit,
+		"rate_limits":       rateLimits,
+		"provider_configs":  providerConfigs,
+		"model_configs":     models,
+		"provider_balances": h.providerAccountBalances(ctx, vk),
 	})
 }
 

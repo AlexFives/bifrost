@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -80,6 +82,25 @@ func TestVirtualKeyUsageSelfService(t *testing.T) {
 	} {
 		require.NoError(t, store.CreateVirtualKey(ctx, &key))
 	}
+	providerAuth := make(chan string, 4)
+	providerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		providerAuth <- r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"is_available":true,"balance_infos":[{"currency":"USD","total_balance":"12.34","granted_balance":"0.00","topped_up_balance":"12.34"}]}`))
+	}))
+	t.Cleanup(providerServer.Close)
+	require.NoError(t, store.AddProvider(ctx, schemas.DeepSeek, configstore.ProviderConfig{
+		NetworkConfig: &schemas.NetworkConfig{BaseURL: providerServer.URL},
+		Keys: []schemas.Key{
+			{ID: "deepseek-key-allowed", Name: "DeepSeek account", Value: *schemas.NewSecretVar("provider-secret"), Weight: 1},
+			{ID: "deepseek-key-hidden", Name: "Other DeepSeek account", Value: *schemas.NewSecretVar("other-secret"), Weight: 1},
+		},
+	}))
+	require.NoError(t, store.CreateVirtualKeyProviderConfig(ctx, &configtables.TableVirtualKeyProviderConfig{
+		VirtualKeyID: "vk-one",
+		Provider:     string(schemas.DeepSeek),
+		Keys:         []configtables.TableKey{{KeyID: "deepseek-key-allowed"}},
+	}))
 	keyOne, keyTwo := "vk-one", "vk-two"
 	costOne, costTwo := 0.25, 9.0
 	now := time.Now().UTC()
@@ -163,6 +184,32 @@ func TestVirtualKeyUsageSelfService(t *testing.T) {
 		require.Equal(t, fasthttp.StatusOK, quota.Response.StatusCode())
 		require.Contains(t, string(quota.Response.Header.Peek("Cache-Control")), "no-store")
 		require.Equal(t, fasthttp.StatusUnauthorized, usageRequest(t, protected, "sk-bf-one", "/api/governance/virtual-keys").Response.StatusCode())
+	})
+
+	t.Run("quota shows the real balance for allowed provider accounts without exposing credentials", func(t *testing.T) {
+		response := usageRequest(t, r, "sk-bf-one", "/api/governance/virtual-keys/quota")
+		require.Equal(t, fasthttp.StatusOK, response.Response.StatusCode(), string(response.Response.Body()))
+		var result struct {
+			ProviderBalances []struct {
+				Provider     string  `json:"provider"`
+				KeyName      string  `json:"key_name"`
+				Currency     string  `json:"currency"`
+				Balance      float64 `json:"balance"`
+				Status       string  `json:"status"`
+				CanAggregate bool    `json:"can_aggregate"`
+			} `json:"provider_balances"`
+		}
+		require.NoError(t, json.Unmarshal(response.Response.Body(), &result))
+		require.Len(t, result.ProviderBalances, 1)
+		require.Equal(t, string(schemas.DeepSeek), result.ProviderBalances[0].Provider)
+		require.Equal(t, "DeepSeek account", result.ProviderBalances[0].KeyName)
+		require.True(t, result.ProviderBalances[0].CanAggregate)
+		require.Equal(t, "USD", result.ProviderBalances[0].Currency)
+		require.InDelta(t, 12.34, result.ProviderBalances[0].Balance, 0.00001)
+		require.Equal(t, "available", result.ProviderBalances[0].Status)
+		require.Equal(t, "Bearer provider-secret", <-providerAuth)
+		require.NotContains(t, string(response.Response.Body()), "provider-secret")
+		require.NotContains(t, string(response.Response.Body()), "other-secret")
 	})
 
 	for _, tc := range []struct {

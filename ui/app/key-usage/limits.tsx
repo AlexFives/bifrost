@@ -13,6 +13,15 @@ function formatMoney(value: number): string {
 	}).format(value);
 }
 
+function formatProviderMoney(value: number, currency: string): string {
+	return new Intl.NumberFormat(getLocale(), {
+		style: "currency",
+		currency,
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 6,
+	}).format(value);
+}
+
 function LimitRow({
 	label,
 	used,
@@ -95,19 +104,24 @@ export function KeyLimits({ quota }: { quota: Quota }) {
 	const { t } = useTranslation("keyUsage");
 	const overallRates = quota.rate_limits.length ? quota.rate_limits : quota.rate_limit ? [quota.rate_limit] : [];
 	const providers = quota.provider_configs.filter((provider) => provider.budgets.length > 0 || hasRateLimit(provider.rate_limit));
-	const providerBudgets = quota.provider_configs.flatMap((provider) => provider.budgets);
-	const providerBudgetTotals = providerBudgets.reduce(
-		(totals, budget) => {
-			const maximum = getEffectiveBudgetLimit(budget);
-			return {
-				available: totals.available + Math.max(0, maximum - budget.current_usage),
-				maximum: totals.maximum + maximum,
-			};
-		},
-		{ available: 0, maximum: 0 },
-	);
+	const providerBalances = quota.provider_balances;
+	const providerAccountCounts = providerBalances.reduce<Map<string, Set<string>>>((counts, balance) => {
+		if (!balance.key_name) return counts;
+		const accounts = counts.get(balance.provider) ?? new Set<string>();
+		accounts.add(balance.key_name);
+		counts.set(balance.provider, accounts);
+		return counts;
+	}, new Map<string, Set<string>>());
+	const canShowProviderBalanceTotals = providerBalances.length > 0 &&
+		providerBalances.every((balance) => balance.key_name && balance.can_aggregate && balance.status === "available") &&
+		[...providerAccountCounts.values()].every((accounts) => accounts.size <= 1);
+	const providerBalanceTotals = providerBalances.reduce<Map<string, number>>((totals, balance) => {
+		if (balance.status !== "available" || balance.balance == null || !balance.currency) return totals;
+		totals.set(balance.currency, (totals.get(balance.currency) ?? 0) + balance.balance);
+		return totals;
+	}, new Map<string, number>());
 	const models = quota.model_configs.filter((model) => model.budgets.length > 0 || hasRateLimit(model.rate_limit));
-	const hasLimits = quota.budgets.length > 0 || overallRates.some(hasRateLimit) || providers.length > 0 || models.length > 0;
+	const hasLimits = quota.budgets.length > 0 || overallRates.some(hasRateLimit) || providers.length > 0 || models.length > 0 || providerBalances.length > 0;
 	return (
 		<section aria-labelledby="limits-heading" className="space-y-5">
 			<div>
@@ -117,6 +131,43 @@ export function KeyLimits({ quota }: { quota: Quota }) {
 				<p className="text-muted-foreground mt-1 text-sm">{t("limitsDescription")}</p>
 			</div>
 			{!hasLimits && <p className="text-muted-foreground rounded-sm border p-5 text-sm">{t("noLimits")}</p>}
+			<div className="bg-card rounded-sm border p-5">
+				<h3 className="font-medium">{t("providerBalances")}</h3>
+				<p className="text-muted-foreground mt-1 text-sm">{t("providerBalancesDescription")}</p>
+				{providerBalances.length === 0 ? (
+					<p className="text-muted-foreground py-4 text-sm">{t("noProviderBalances")}</p>
+				) : (
+					<>
+						{canShowProviderBalanceTotals && providerBalanceTotals.size > 0 && (
+							<div className="border-border divide-border mt-4 grid gap-x-6 border-y py-3 sm:grid-cols-2">
+								{[...providerBalanceTotals.entries()].map(([currency, amount]) => (
+									<div key={currency} className="flex justify-between gap-4 py-1 text-sm">
+										<span className="text-muted-foreground">{t("providerBalanceTotal", { currency })}</span>
+										<span className="font-medium tabular-nums">{formatProviderMoney(amount, currency)}</span>
+									</div>
+								))}
+							</div>
+						)}
+						{!canShowProviderBalanceTotals && (
+							<p className="text-muted-foreground border-border mt-4 border-y py-3 text-xs">{t("providerBalanceTotalsOmitted")}</p>
+						)}
+						<div className="divide-border divide-y">
+							{providerBalances.map((balance, index) => (
+								<div key={`${balance.provider}/${balance.key_name ?? index}/${balance.currency ?? ""}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 first:pt-4 last:pb-0">
+									<span className="text-sm font-medium break-all">
+										{balance.provider}{balance.key_name ? ` / ${balance.key_name}` : ""}
+									</span>
+									<span className="text-muted-foreground text-sm tabular-nums">
+										{balance.status === "available" && balance.balance != null && balance.currency
+											? formatProviderMoney(balance.balance, balance.currency)
+											: t("providerBalanceUnavailable")}
+									</span>
+								</div>
+							))}
+						</div>
+					</>
+				)}
+			</div>
 			{(quota.budgets.length > 0 || overallRates.some(hasRateLimit)) && (
 				<div className="bg-card rounded-sm border p-5">
 					<h3 className="font-medium">{t("overallLimits")}</h3>
@@ -129,14 +180,6 @@ export function KeyLimits({ quota }: { quota: Quota }) {
 			{providers.length > 0 && (
 				<div className="bg-card rounded-sm border p-5">
 					<h3 className="font-medium">{t("providerLimits")}</h3>
-					{providerBudgets.length > 0 && (
-						<p className="text-muted-foreground border-border border-b py-4 text-sm tabular-nums">
-							{t("providerBudgetSummary", {
-								available: formatMoney(providerBudgetTotals.available),
-								total: formatMoney(providerBudgetTotals.maximum),
-							})}
-						</p>
-					)}
 					<div className="divide-border divide-y">
 						{providers.map((provider) => (
 							<div key={provider.provider} className="py-3 first:pt-4 last:pb-0">

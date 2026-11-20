@@ -4415,6 +4415,7 @@ func (s *RDBConfigStore) GetVirtualKeyQuotaByValue(ctx context.Context, value st
 		Preload("Budgets").
 		Preload("RateLimit").
 		Preload("ProviderConfigs").
+		Preload("ProviderConfigs.Keys").
 		Preload("ProviderConfigs.Budgets").
 		Preload("ProviderConfigs.RateLimit")
 	return s.findVirtualKeyByValue(baseQuery, value)
