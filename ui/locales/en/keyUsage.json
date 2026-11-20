@@ -22,6 +22,7 @@
 	"limitsDescription": "Limits attached to this key. Shared limits may also apply.",
 	"overallLimits": "Key limits",
 	"providerLimits": "Provider limits",
+	"providerBudgetSummary": "Available across providers: {{available}} of {{total}}",
 	"modelLimits": "Model limits",
 	"remaining": "Remaining",
 	"spent": "Used",

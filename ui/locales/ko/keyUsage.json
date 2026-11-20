@@ -22,6 +22,7 @@
 	"limitsDescription": "이 키에 설정된 한도입니다. 공유 한도도 적용될 수 있습니다.",
 	"overallLimits": "키 한도",
 	"providerLimits": "공급자 한도",
+	"providerBudgetSummary": "전체 공급자에서 사용 가능: {{available}} / {{total}}",
 	"modelLimits": "모델 한도",
 	"remaining": "남음",
 	"spent": "사용됨",

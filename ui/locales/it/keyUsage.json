@@ -22,6 +22,7 @@
 	"limitsDescription": "Limiti della chiave. Possono applicarsi anche limiti condivisi.",
 	"overallLimits": "Limiti della chiave",
 	"providerLimits": "Limiti dei provider",
+	"providerBudgetSummary": "Disponibile per tutti i provider: {{available}} su {{total}}",
 	"modelLimits": "Limiti dei modelli",
 	"remaining": "Rimanente",
 	"spent": "Utilizzato",

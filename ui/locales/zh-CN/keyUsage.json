@@ -22,6 +22,7 @@
 	"limitsDescription": "此密钥的限额，也可能受到共享限额的限制。",
 	"overallLimits": "密钥限额",
 	"providerLimits": "提供商限额",
+	"providerBudgetSummary": "所有提供商可用额度：{{available}} / {{total}}",
 	"modelLimits": "模型限额",
 	"remaining": "剩余",
 	"spent": "已使用",

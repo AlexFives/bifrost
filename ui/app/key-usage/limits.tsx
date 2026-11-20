@@ -95,6 +95,17 @@ export function KeyLimits({ quota }: { quota: Quota }) {
 	const { t } = useTranslation("keyUsage");
 	const overallRates = quota.rate_limits.length ? quota.rate_limits : quota.rate_limit ? [quota.rate_limit] : [];
 	const providers = quota.provider_configs.filter((provider) => provider.budgets.length > 0 || hasRateLimit(provider.rate_limit));
+	const providerBudgets = quota.provider_configs.flatMap((provider) => provider.budgets);
+	const providerBudgetTotals = providerBudgets.reduce(
+		(totals, budget) => {
+			const maximum = getEffectiveBudgetLimit(budget);
+			return {
+				available: totals.available + Math.max(0, maximum - budget.current_usage),
+				maximum: totals.maximum + maximum,
+			};
+		},
+		{ available: 0, maximum: 0 },
+	);
 	const models = quota.model_configs.filter((model) => model.budgets.length > 0 || hasRateLimit(model.rate_limit));
 	const hasLimits = quota.budgets.length > 0 || overallRates.some(hasRateLimit) || providers.length > 0 || models.length > 0;
 	return (
@@ -118,6 +129,14 @@ export function KeyLimits({ quota }: { quota: Quota }) {
 			{providers.length > 0 && (
 				<div className="bg-card rounded-sm border p-5">
 					<h3 className="font-medium">{t("providerLimits")}</h3>
+					{providerBudgets.length > 0 && (
+						<p className="text-muted-foreground border-border border-b py-4 text-sm tabular-nums">
+							{t("providerBudgetSummary", {
+								available: formatMoney(providerBudgetTotals.available),
+								total: formatMoney(providerBudgetTotals.maximum),
+							})}
+						</p>
+					)}
 					<div className="divide-border divide-y">
 						{providers.map((provider) => (
 							<div key={provider.provider} className="py-3 first:pt-4 last:pb-0">

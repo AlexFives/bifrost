@@ -22,6 +22,7 @@
 	"limitsDescription": "Limits dieses Schlüssels. Gemeinsame Limits können ebenfalls gelten.",
 	"overallLimits": "Schlüssellimits",
 	"providerLimits": "Anbieterlimits",
+	"providerBudgetSummary": "Über alle Anbieter verfügbar: {{available}} von {{total}}",
 	"modelLimits": "Modelllimits",
 	"remaining": "Verbleibend",
 	"spent": "Verbraucht",

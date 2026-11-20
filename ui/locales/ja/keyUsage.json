@@ -22,6 +22,7 @@
 	"limitsDescription": "このキーの制限です。共有制限も適用される場合があります。",
 	"overallLimits": "キーの制限",
 	"providerLimits": "プロバイダーの制限",
+	"providerBudgetSummary": "全プロバイダーの利用可能額: {{available}} / {{total}}",
 	"modelLimits": "モデルの制限",
 	"remaining": "残り",
 	"spent": "使用済み",

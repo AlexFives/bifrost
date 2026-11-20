@@ -22,6 +22,7 @@
 	"limitsDescription": "此金鑰的限額，也可能受到共用限額限制。",
 	"overallLimits": "金鑰限額",
 	"providerLimits": "供應商限額",
+	"providerBudgetSummary": "所有供應商可用額度：{{available}} / {{total}}",
 	"modelLimits": "模型限額",
 	"remaining": "剩餘",
 	"spent": "已使用",

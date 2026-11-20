@@ -22,6 +22,7 @@
 	"limitsDescription": "Limites de cette clé. Des limites partagées peuvent aussi s’appliquer.",
 	"overallLimits": "Limites de la clé",
 	"providerLimits": "Limites des fournisseurs",
+	"providerBudgetSummary": "Disponible pour tous les fournisseurs : {{available}} sur {{total}}",
 	"modelLimits": "Limites des modèles",
 	"remaining": "Restant",
 	"spent": "Utilisé",
